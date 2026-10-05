@@ -35,7 +35,7 @@ distribution tools.
 ## Requirements
 
 - Select pam_provider explicitly. For AD members, run jomrr.krb5, then
-  jomrr.pam, then jomrr.samba_ad_sssd or jomrr.samba_ad_member.
+  jomrr.pam, then jomrr.sssd or jomrr.samba_ad_member.
 - The provider role configures and starts SSSD or winbind after this role
   selects its PAM and NSS integration.
 - Red Hat hosts need a native authselect profile for the selected provider.
@@ -216,9 +216,9 @@ Select native authentication before configuring the domain provider.
       pam_provider: sssd
       pam_home_roots:
         - /home/ad.example.com
-    - role: jomrr.samba_ad_sssd
-      samba_ad_sssd_realm: AD.EXAMPLE.COM
-      samba_ad_sssd_join_password: "{{ vault_ad_join_password }}"
+    - role: jomrr.sssd
+      sssd_realm: AD.EXAMPLE.COM
+      sssd_join_password: "{{ vault_ad_join_password }}"
 ```
 
 ### Winbind member

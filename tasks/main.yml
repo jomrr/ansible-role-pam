@@ -24,8 +24,6 @@
          ((ansible_facts.selinux.status == 'enabled' and pam_home_roots | length > 0) |
           ternary(['policycoreutils-python-utils'], [])) }}
     state: present
-  environment:
-    DEBIAN_FRONTEND: noninteractive
 
 - name: PAM | Select the native authentication provider
   ansible.builtin.include_tasks: "{{ ansible_facts.os_family }}.yml"

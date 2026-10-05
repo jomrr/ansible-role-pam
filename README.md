@@ -34,8 +34,9 @@ distribution tools.
 
 ## Requirements
 
-- Select pam_provider explicitly. For AD members, run jomrr.krb5, then
-  jomrr.pam, then jomrr.sssd or jomrr.samba_ad_member.
+- Select pam_provider explicitly for standalone use. jomrr.sssd and
+  jomrr.samba_ad_member invoke this role internally after jomrr.krb5, selecting
+  sssd and winbind respectively.
 - The provider role configures and starts SSSD or winbind after this role
   selects its PAM and NSS integration.
 - Red Hat hosts need a native authselect profile for the selected provider.
@@ -202,7 +203,7 @@ remains unchanged.
 
 ### SSSD domain member
 
-Select native authentication before configuring the domain provider.
+SSSD selects native authentication internally; pam options remain configurable.
 
 ```yaml
 ---
@@ -210,13 +211,9 @@ Select native authentication before configuring the domain provider.
   hosts: workstations
   gather_facts: true
   roles:
-    - role: jomrr.krb5
-      krb5_realm: AD.EXAMPLE.COM
-    - role: jomrr.pam
-      pam_provider: sssd
+    - role: jomrr.sssd
       pam_home_roots:
         - /home/ad.example.com
-    - role: jomrr.sssd
       sssd_realm: AD.EXAMPLE.COM
       sssd_join_password: "{{ vault_ad_join_password }}"
 ```
@@ -231,13 +228,9 @@ Samba owns pam_winbind.conf; the pam role owns the native stack and NSS.
   hosts: fileservers
   gather_facts: true
   roles:
-    - role: jomrr.krb5
-      krb5_realm: AD.EXAMPLE.COM
-    - role: jomrr.pam
-      pam_provider: winbind
+    - role: jomrr.samba_ad_member
       pam_home_roots:
         - /home/EXAMPLE
-    - role: jomrr.samba_ad_member
       samba_ad_member_realm: AD.EXAMPLE.COM
       samba_ad_member_domain: EXAMPLE
       samba_ad_member_server: dc1.ad.example.com

@@ -11,6 +11,5 @@ __pam_provider_packages:
   local: []
 __pam_home_packages: [oddjob-mkhomedir]
 __pam_authselect_profile: >-
-  {{ [pam_provider] + (pam_authselect_features | difference(['with-mkhomedir', 'with-pamaccess'])) +
-     (pam_mkhomedir | ternary(['with-mkhomedir'], [])) +
-     ((pam_access_rules | length > 0) | ternary(['with-pamaccess'], [])) }}
+  {{ [pam_provider] + (pam_authselect_features | difference(['with-mkhomedir'])) +
+     (pam_mkhomedir | ternary(['with-mkhomedir'], [])) }}

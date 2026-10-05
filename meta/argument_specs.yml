@@ -4,7 +4,7 @@
 
 argument_specs:
   main:
-    short_description: Select native authentication providers and login policies.
+    short_description: Select native authentication providers and home creation.
     options:
       pam_provider:
         type: str
@@ -26,40 +26,13 @@ argument_specs:
         default:
           - without-nullok
           - with-faillock
-        description: Additional Red Hat profile features; home creation and access rules
-          are controlled separately.
+        description: Additional Red Hat profile features; home creation is controlled separately.
       pam_authselect_force:
         type: bool
         required: false
         default: false
         description: Allow authselect to adopt unmanaged PAM/NSS files with its native backup
           mechanism.
-      pam_access_rules:
-        type: list
-        elements: dict
-        required: false
-        default: []
-        description: Ordered pam_access rules; an empty list disables the module and preserves
-          access.conf.
-        options:
-          permission:
-            type: str
-            choices:
-              - +
-              - '-'
-            required: true
-            description: Allow or deny matching accounts.
-          users:
-            type: list
-            elements: str
-            required: true
-            description: Account names, parenthesized group names or native pam_access expressions
-              without spaces in names.
-          origins:
-            type: list
-            elements: str
-            required: true
-            description: Native pam_access origin tokens such as ALL, LOCAL, hosts or networks.
       pam_home_roots:
         type: list
         elements: path

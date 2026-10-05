@@ -1,7 +1,7 @@
 [project]
 name = "pam"
 version = "0.0.0"
-description = "Manage native PAM authentication, passwd/group NSS providers, login access rules and domain home labels."
+description = "Manage native PAM authentication, passwd/group NSS providers and domain home labels."
 requires-python = ">=3.12"
 authors = [
   { name = "Jonas Mauer" },

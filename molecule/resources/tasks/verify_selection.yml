@@ -15,7 +15,6 @@
     that:
       - __pam_native_profile.stdout.split()[0] == __pam_expected_provider
       - "('with-mkhomedir' in __pam_native_profile.stdout.split()) == ('mkhomedir' in __pam_expected_modules)"
-      - "('with-pamaccess' in __pam_native_profile.stdout.split()) == ('access' in __pam_expected_modules)"
   when: ansible_facts.os_family == 'RedHat'
 
 - name: PAM | Read the native Debian profile selection
@@ -31,7 +30,7 @@
     that:
       - >-
         __pam_native_selection.current['libpam-runtime/profiles'].split(', ') |
-        intersect(['sss', 'winbind', 'mkhomedir', 'access']) | sort == __pam_expected_modules | sort
+        intersect(['sss', 'winbind', 'mkhomedir']) | sort == __pam_expected_modules | sort
       - "'unix' in __pam_native_selection.current['libpam-runtime/profiles'].split(', ')"
       - "'molecule' in __pam_native_selection.current['libpam-runtime/profiles'].split(', ')"
   when: ansible_facts.os_family == 'Debian'
@@ -46,7 +45,7 @@
   failed_when: >-
     __pam_native_module.rc != 0 or
     (__pam_native_module.stdout | length > 0) != (item in __pam_expected_modules)
-  loop: [sss, winbind, mkhomedir, access]
+  loop: [sss, winbind, mkhomedir]
   when: ansible_facts.os_family == 'Suse'
 
 - name: PAM | Read preserved NSS sources

@@ -8,8 +8,7 @@ __pam_provider_packages:
   winbind: [libpam-winbind, libnss-winbind]
   local: []
 __pam_home_packages: []
-__pam_managed_profiles: [sss, winbind, mkhomedir, access]
+__pam_managed_profiles: [sss, winbind, mkhomedir]
 __pam_enabled_profiles: >-
   {{ (pam_provider == 'local') | ternary([], [pam_provider | replace('sssd', 'sss')]) +
-     (pam_mkhomedir | ternary(['mkhomedir'], [])) +
-     ((pam_access_rules | length > 0) | ternary(['access'], [])) }}
+     (pam_mkhomedir | ternary(['mkhomedir'], [])) }}

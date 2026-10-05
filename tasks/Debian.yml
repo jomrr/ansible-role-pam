@@ -2,18 +2,6 @@
 # role: pam
 # file: tasks/Debian.yml
 
-- name: PAM | Provide the native login access profile
-  become: true
-  become_user: root
-  ansible.builtin.copy:
-    dest: /usr/share/pam-configs/access
-    owner: root
-    group: root
-    mode: '0644'
-    src: pam-access
-  register: __pam_access_profile
-  when: pam_access_rules | length > 0
-
 - name: PAM | Read the native PAM profile selection after package installation
   become: true
   become_user: root
@@ -35,14 +23,5 @@
     DEBIAN_FRONTEND: noninteractive
   changed_when: true
   when: >-
-    __pam_access_profile.changed or
     __pam_selection.current['libpam-runtime/profiles'].split(', ') |
     intersect(__pam_managed_profiles) | sort != __pam_enabled_profiles | sort
-
-- name: PAM | Remove the inactive native login access profile
-  become: true
-  become_user: root
-  ansible.builtin.file:
-    path: /usr/share/pam-configs/access
-    state: absent
-  when: pam_access_rules | length == 0

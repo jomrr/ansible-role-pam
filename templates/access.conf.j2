@@ -1,6 +1,0 @@
-# Managed by ansible.
-# file: {{ template_destpath }}
-
-{% for __pam_rule in pam_access_rules %}
-{{ __pam_rule.permission }} : {{ __pam_rule.users | join(' ') }} : {{ __pam_rule.origins | join(' ') }}
-{% endfor %}

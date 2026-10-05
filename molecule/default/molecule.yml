@@ -27,18 +27,6 @@ provisioner:
         pam_authselect_force: true
         pam_home_roots:
           - "/home/pam-fixture"
-        pam_access_rules:
-          - permission: "+"
-            users:
-              - "(pam_access_ok)"
-            origins:
-              - "ALL"
-          - permission: "-"
-            users:
-              - "pam_allowed"
-              - "pam_denied"
-            origins:
-              - "ALL"
   log: true
   playbooks:
     prepare: "../resources/playbooks/prepare.yml"

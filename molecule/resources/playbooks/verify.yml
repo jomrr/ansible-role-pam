@@ -2,7 +2,7 @@
 # role: pam
 # file: molecule/resources/playbooks/verify.yml
 
-- name: PAM | Verify provider selection and ordered account access
+- name: PAM | Verify provider selection and home creation
   hosts: all
   gather_facts: true
   tasks:
@@ -10,21 +10,12 @@
       ansible.builtin.import_tasks: ../tasks/verify_selection.yml
       vars:
         __pam_expected_provider: sssd
-        __pam_expected_modules: [sss, mkhomedir, access]
+        __pam_expected_modules: [sss, mkhomedir]
 
-    - name: PAM | Authenticate a group member through the native PAM stack
+    - name: PAM | Authenticate through the native PAM stack and create the home
       ansible.builtin.command:
         expand_argument_vars: false
-        argv: [su, --login, --command, 'test -d "$HOME"', pam_allowed]
+        argv: [su, --login, --command, 'test -d "$HOME"', pam_home_enabled]
         stdin: Molecule-Pam-Only-1!
       changed_when: false
-      no_log: true
-
-    - name: PAM | Reject the denied local account with its correct password
-      ansible.builtin.command:
-        argv: [su, --login, --command, 'true', pam_denied]
-        stdin: Molecule-Pam-Only-1!
-      register: __pam_denied_login
-      changed_when: false
-      failed_when: __pam_denied_login.rc == 0
       no_log: true

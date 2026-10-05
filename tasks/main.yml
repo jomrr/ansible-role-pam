@@ -27,18 +27,6 @@
   environment:
     DEBIAN_FRONTEND: noninteractive
 
-- name: PAM | Configure ordered login access rules
-  become: true
-  become_user: root
-  ansible.builtin.template:
-    src: access.conf.j2
-    dest: /etc/security/access.conf
-    owner: root
-    group: root
-    mode: '0644'
-    backup: true
-  when: pam_access_rules | length > 0
-
 - name: PAM | Select the native authentication provider
   ansible.builtin.include_tasks: "{{ ansible_facts.os_family }}.yml"
 

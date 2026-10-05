@@ -1,0 +1,27 @@
+---
+# role: pam
+# file: tasks/nss.yml
+
+- name: PAM | Remove inactive provider sources from passwd and group
+  become: true
+  become_user: root
+  ansible.builtin.replace:
+    path: /etc/nsswitch.conf
+    regexp: '^(passwd|group):([ \t]*(?:[^#\n]*?[ \t]+)?){{ __pam_nss_source }}(?=[ \t#]|$)[ \t]*'
+    replace: '\1:\2'
+    backup: true
+  loop: [sss, winbind]
+  loop_control:
+    loop_var: __pam_nss_source
+    label: "{{ __pam_nss_source }}"
+  when: __pam_nss_source != pam_provider | replace('sssd', 'sss')
+
+- name: PAM | Append the selected provider without replacing existing NSS sources
+  become: true
+  become_user: root
+  ansible.builtin.replace:
+    path: /etc/nsswitch.conf
+    regexp: '^(passwd|group):([ \t]*)(?!(?:[^#\n]*[ \t]+)?{{ pam_provider | replace("sssd", "sss") }}(?=[ \t#]|$))([^#\n]*?)([ \t]*(?:#.*)?)$'
+    replace: '\1:\2\3 {{ pam_provider | replace("sssd", "sss") }}\4'
+    backup: true
+  when: pam_provider != 'local'

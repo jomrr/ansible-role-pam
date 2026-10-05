@@ -1,0 +1,17 @@
+---
+# role: pam
+# file: meta/main.yml
+
+galaxy_info:
+  author: Jonas Mauer
+  description: Manage native PAM authentication, passwd/group NSS providers, login access rules and domain home labels.
+  galaxy_tags:
+    - authentication
+    - pam
+    - nss
+    - selinux
+  issue_tracker_url: https://github.com/jomrr/ansible-role-pam/issues
+  license: MIT
+  min_ansible_version: "2.20"
+  namespace: jomrr
+  role_name: pam

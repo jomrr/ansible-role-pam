@@ -1,0 +1,69 @@
+---
+# role: pam
+# file: meta/argument_specs.yml
+
+argument_specs:
+  main:
+    short_description: Select native authentication providers and login policies.
+    options:
+      pam_provider:
+        type: str
+        required: true
+        choices:
+          - sssd
+          - winbind
+          - local
+        description: Identity provider selected in the native PAM and NSS configuration.
+      pam_mkhomedir:
+        type: bool
+        required: false
+        default: true
+        description: Create home directories through the native PAM session module.
+      pam_authselect_features:
+        type: list
+        elements: str
+        required: false
+        default:
+          - without-nullok
+          - with-faillock
+        description: Additional Red Hat profile features; home creation and access rules
+          are controlled separately.
+      pam_authselect_force:
+        type: bool
+        required: false
+        default: false
+        description: Allow authselect to adopt unmanaged PAM/NSS files with its native backup
+          mechanism.
+      pam_access_rules:
+        type: list
+        elements: dict
+        required: false
+        default: []
+        description: Ordered pam_access rules; an empty list disables the module and preserves
+          access.conf.
+        options:
+          permission:
+            type: str
+            choices:
+              - +
+              - '-'
+            required: true
+            description: Allow or deny matching accounts.
+          users:
+            type: list
+            elements: str
+            required: true
+            description: Account names, parenthesized group names or native pam_access expressions
+              without spaces in names.
+          origins:
+            type: list
+            elements: str
+            required: true
+            description: Native pam_access origin tokens such as ALL, LOCAL, hosts or networks.
+      pam_home_roots:
+        type: list
+        elements: path
+        required: false
+        default: []
+        description: Absolute home roots below /home for SELinux equivalence mappings; removed
+          entries are not cleaned up.

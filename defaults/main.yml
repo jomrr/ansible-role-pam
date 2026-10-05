@@ -1,0 +1,30 @@
+---
+# role: pam
+# file: defaults/main.yml
+
+# Identity provider selected in the native PAM and NSS configuration.
+# Choices: sssd, winbind, local
+# pam_provider: sssd
+
+# Create home directories through the native PAM session module.
+pam_mkhomedir: true
+
+# Additional Red Hat profile features; home creation and access rules are controlled separately.
+pam_authselect_features:
+  - without-nullok
+  - with-faillock
+
+# Allow authselect to adopt unmanaged PAM/NSS files with its native backup mechanism.
+pam_authselect_force: false
+
+# Ordered pam_access rules; an empty list disables the module and preserves access.conf.
+pam_access_rules: []
+# pam_access_rules:
+#   - permission: '+'
+#     users: ['(linux-admins)']
+#     origins: [ALL]
+
+# Home roots below /home that need SELinux equivalence mappings to /home.
+pam_home_roots: []
+# pam_home_roots:
+#   - /home/AD.EXAMPLE.COM

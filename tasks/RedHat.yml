@@ -1,0 +1,31 @@
+---
+# role: pam
+# file: tasks/RedHat.yml
+
+- name: PAM | Enable the native home directory broker
+  become: true
+  become_user: root
+  ansible.builtin.systemd_service:
+    name: oddjobd
+    enabled: true
+    state: started
+  when: pam_mkhomedir
+
+- name: PAM | Read the native authentication profile
+  become: true
+  become_user: root
+  ansible.builtin.command: authselect current --raw
+  register: __pam_authselect
+  changed_when: false
+  failed_when: __pam_authselect.rc not in [0, 2]
+  check_mode: false
+
+- name: PAM | Select the native authentication profile
+  become: true
+  become_user: root
+  ansible.builtin.command:
+    argv: >-
+      {{ ['authselect', 'select'] + __pam_authselect_profile +
+         (pam_authselect_force | ternary(['--force'], [])) }}
+  changed_when: true
+  when: __pam_authselect.stdout.split() | sort != __pam_authselect_profile | sort

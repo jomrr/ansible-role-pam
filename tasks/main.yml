@@ -1,0 +1,62 @@
+---
+# role: pam
+# file: tasks/main.yml
+
+- name: PAM | Load platform settings
+  ansible.builtin.include_vars: "{{ lookup('ansible.builtin.first_found', __pam_platform_files) }}"
+  vars:
+    __pam_platform_files:
+      files:
+        - "{{ ansible_facts.os_family }}.yml"
+      paths:
+        - "{{ role_path }}/vars"
+
+- name: PAM | Validate home roots
+  ansible.builtin.import_tasks: assert.yml
+
+- name: PAM | Install native authentication components
+  become: true
+  become_user: root
+  ansible.builtin.package:
+    name: >-
+      {{ __pam_packages + __pam_provider_packages[pam_provider] +
+         (pam_mkhomedir | ternary(__pam_home_packages, [])) +
+         ((ansible_facts.selinux.status == 'enabled' and pam_home_roots | length > 0) |
+          ternary(['policycoreutils-python-utils'], [])) }}
+    state: present
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: PAM | Configure ordered login access rules
+  become: true
+  become_user: root
+  ansible.builtin.template:
+    src: access.conf.j2
+    dest: /etc/security/access.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+  when: pam_access_rules | length > 0
+
+- name: PAM | Select the native authentication provider
+  ansible.builtin.include_tasks: "{{ ansible_facts.os_family }}.yml"
+
+- name: PAM | Configure provider lookup sources outside authselect
+  ansible.builtin.import_tasks: nss.yml
+  when: ansible_facts.os_family != 'RedHat'
+
+- name: PAM | Map domain home roots to the standard SELinux home policy
+  become: true
+  become_user: root
+  community.general.sefcontext:
+    target: "{{ __pam_home_root }}"
+    substitute: /home
+    state: present
+  loop: "{{ pam_home_roots }}"
+  loop_control:
+    loop_var: __pam_home_root
+    label: "{{ __pam_home_root }}"
+  register: __pam_home_contexts
+  when: ansible_facts.selinux.status == 'enabled'
+  notify: relabel home roots

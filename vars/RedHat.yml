@@ -1,0 +1,16 @@
+---
+# role: pam
+# file: vars/RedHat.yml
+
+__pam_packages:
+  - authselect
+  - pam
+__pam_provider_packages:
+  sssd: [sssd-client]
+  winbind: [samba-winbind]
+  local: []
+__pam_home_packages: [oddjob-mkhomedir]
+__pam_authselect_profile: >-
+  {{ [pam_provider] + (pam_authselect_features | difference(['with-mkhomedir', 'with-pamaccess'])) +
+     (pam_mkhomedir | ternary(['with-mkhomedir'], [])) +
+     ((pam_access_rules | length > 0) | ternary(['with-pamaccess'], [])) }}

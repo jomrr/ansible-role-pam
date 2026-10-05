@@ -1,0 +1,59 @@
+---
+# role: pam
+# file: molecule/resources/playbooks/side_effect.yml
+
+- name: PAM | Verify provider and login policy changes
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: PAM | Switch to winbind with the login policy retained
+      ansible.builtin.include_role:
+        name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+      vars:
+        pam_provider: winbind
+
+    - name: PAM | Verify winbind replaced SSSD in the native selection
+      ansible.builtin.import_tasks: ../tasks/verify_selection.yml
+      vars:
+        __pam_expected_provider: winbind
+        __pam_expected_modules: [winbind, mkhomedir, access]
+
+    - name: PAM | Read the access rules before deactivation
+      become: true
+      become_user: root
+      ansible.builtin.slurp:
+        src: /etc/security/access.conf
+      register: __pam_access_before
+
+    - name: PAM | Switch to local accounts and disable optional login modules
+      ansible.builtin.include_role:
+        name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+      vars:
+        pam_provider: local
+        pam_mkhomedir: false
+        pam_access_rules: []
+
+    - name: PAM | Verify local authentication and inactive optional modules
+      ansible.builtin.import_tasks: ../tasks/verify_selection.yml
+      vars:
+        __pam_expected_provider: local
+        __pam_expected_modules: []
+
+    - name: PAM | Authenticate the formerly denied account without creating its home
+      ansible.builtin.command:
+        expand_argument_vars: false
+        argv: [su, --login, --command, 'test ! -d "$HOME"', pam_denied]
+        stdin: Molecule-Pam-Only-1!
+      changed_when: false
+      no_log: true
+
+    - name: PAM | Read preserved access rules
+      become: true
+      become_user: root
+      ansible.builtin.slurp:
+        src: /etc/security/access.conf
+      register: __pam_access_after
+
+    - name: PAM | Verify deactivation preserves the configured rules
+      ansible.builtin.assert:
+        that: __pam_access_before.content == __pam_access_after.content

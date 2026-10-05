@@ -1,0 +1,101 @@
+---
+# role: pam
+# file: molecule/resources/playbooks/prepare.yml
+
+- name: PAM | Prepare native login and NSS fixtures
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: PAM | Refresh Debian package metadata
+      become: true
+      become_user: root
+      ansible.builtin.apt:
+        update_cache: true
+      when: ansible_facts.os_family == 'Debian'
+
+    - name: PAM | Install the native login command in the minimal Fedora image
+      become: true
+      become_user: root
+      ansible.builtin.package:
+        name: util-linux
+        state: present
+      when: ansible_facts.distribution == 'Fedora'
+
+    - name: PAM | Create the allowed login group
+      become: true
+      become_user: root
+      ansible.builtin.group:
+        name: pam_access_ok
+
+    - name: PAM | Create local accounts without homes
+      become: true
+      become_user: root
+      ansible.builtin.user:
+        name: "{{ item }}"
+        password: $6$iF9imAw6/rk5/r4j$bcdHStV3BKBniuLr4uK2t.bLf0BjqLNn4TMlsQacquaAjHgx6fqp.66GECd.kMukAVwxN/ZUBQkPJ99K4gD2L/
+        home: "/home/pam-fixture/{{ item }}"
+        create_home: false
+        shell: /bin/bash
+      loop: [pam_allowed, pam_denied]
+      no_log: true
+
+    - name: PAM | Add the allowed account to the access group
+      become: true
+      become_user: root
+      ansible.builtin.user:
+        name: pam_allowed
+        groups: pam_access_ok
+        append: true
+
+    - name: PAM | Initialize the SUSE NSS fixture
+      become: true
+      become_user: root
+      ansible.builtin.copy:
+        src: /usr/etc/nsswitch.conf
+        dest: /etc/nsswitch.conf
+        remote_src: true
+        force: false
+        mode: '0644'
+      when: ansible_facts.os_family == 'Suse'
+
+    - name: PAM | Supply both provider sources and comments
+      become: true
+      become_user: root
+      ansible.builtin.replace:
+        path: /etc/nsswitch.conf
+        regexp: '^(passwd|group):.*$'
+        replace: '\1: files systemd winbind sss # pam fixture \1'
+      when: ansible_facts.os_family != 'RedHat'
+
+    - name: PAM | Supply a foreign Debian PAM profile
+      become: true
+      become_user: root
+      ansible.builtin.copy:
+        dest: /usr/share/pam-configs/molecule
+        mode: '0644'
+        content: "Name: Molecule foreign profile\nDefault: no\nPriority: 1\nAccount-Type: Additional\nAccount:\n    optional pam_permit.so\n"
+      when: ansible_facts.os_family == 'Debian'
+
+    - name: PAM | Supply a previously selected access profile with low priority
+      become: true
+      become_user: root
+      ansible.builtin.copy:
+        dest: /usr/share/pam-configs/access
+        mode: '0644'
+        content: |
+          Name: Login access control (pam_access)
+          Default: no
+          Priority: 0
+          Account-Type: Additional
+          Account:
+              required pam_access.so
+      when: ansible_facts.os_family == 'Debian'
+
+    - name: PAM | Select foreign and previously managed Debian PAM profiles
+      become: true
+      become_user: root
+      ansible.builtin.command: pam-auth-update --enable molecule access mkhomedir
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      changed_when: true
+      when: ansible_facts.os_family == 'Debian'

@@ -1,0 +1,6 @@
+Name: Login access control (pam_access)
+Default: no
+Priority: 1024
+Account-Type: Additional
+Account:
+	required	pam_access.so

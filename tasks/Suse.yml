@@ -1,0 +1,30 @@
+---
+# role: pam
+# file: tasks/Suse.yml
+
+- name: PAM | Configure native PAM modules
+  ansible.builtin.include_tasks: suse_module.yml
+  loop:
+    - name: sss
+      enabled: "{{ pam_provider == 'sssd' }}"
+    - name: winbind
+      enabled: "{{ pam_provider == 'winbind' }}"
+    - name: mkhomedir
+      enabled: "{{ pam_mkhomedir }}"
+    - name: access
+      enabled: "{{ pam_access_rules | length > 0 }}"
+  loop_control:
+    loop_var: __pam_module
+    label: "{{ __pam_module.name }}"
+
+- name: PAM | Initialize the NSS configuration from distribution defaults
+  become: true
+  become_user: root
+  ansible.builtin.copy:
+    src: /usr/etc/nsswitch.conf
+    dest: /etc/nsswitch.conf
+    remote_src: true
+    force: false
+    owner: root
+    group: root
+    mode: '0644'

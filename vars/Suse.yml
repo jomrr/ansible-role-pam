@@ -1,0 +1,10 @@
+---
+# role: pam
+# file: vars/Suse.yml
+
+__pam_packages: [pam, pam-config]
+__pam_provider_packages:
+  sssd: [sssd]
+  winbind: [samba-winbind]
+  local: []
+__pam_home_packages: []

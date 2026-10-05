@@ -1,0 +1,14 @@
+---
+# role: pam
+# file: tasks/assert.yml
+
+- name: PAM | Require home roots strictly below the standard home directory
+  ansible.builtin.assert:
+    that:
+      - (__pam_home_root | ansible.builtin.normpath) is match('^/home/.+')
+    fail_msg: Each pam_home_roots entry must be an absolute path below /home, not /home itself.
+    quiet: true
+  loop: "{{ pam_home_roots }}"
+  loop_control:
+    loop_var: __pam_home_root
+    label: "{{ __pam_home_root }}"

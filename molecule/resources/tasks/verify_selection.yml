@@ -1,0 +1,71 @@
+---
+# role: pam
+# file: molecule/resources/tasks/verify_selection.yml
+
+- name: PAM | Read the native Red Hat profile
+  become: true
+  become_user: root
+  ansible.builtin.command: authselect current --raw
+  register: __pam_native_profile
+  changed_when: false
+  when: ansible_facts.os_family == 'RedHat'
+
+- name: PAM | Verify the Red Hat provider and optional modules
+  ansible.builtin.assert:
+    that:
+      - __pam_native_profile.stdout.split()[0] == __pam_expected_provider
+      - "('with-mkhomedir' in __pam_native_profile.stdout.split()) == ('mkhomedir' in __pam_expected_modules)"
+      - "('with-pamaccess' in __pam_native_profile.stdout.split()) == ('access' in __pam_expected_modules)"
+  when: ansible_facts.os_family == 'RedHat'
+
+- name: PAM | Read the native Debian profile selection
+  become: true
+  become_user: root
+  ansible.builtin.debconf:
+    name: libpam-runtime
+  register: __pam_native_selection
+  when: ansible_facts.os_family == 'Debian'
+
+- name: PAM | Verify managed and foreign Debian profiles
+  ansible.builtin.assert:
+    that:
+      - >-
+        __pam_native_selection.current['libpam-runtime/profiles'].split(', ') |
+        intersect(['sss', 'winbind', 'mkhomedir', 'access']) | sort == __pam_expected_modules | sort
+      - "'unix' in __pam_native_selection.current['libpam-runtime/profiles'].split(', ')"
+      - "'molecule' in __pam_native_selection.current['libpam-runtime/profiles'].split(', ')"
+  when: ansible_facts.os_family == 'Debian'
+
+- name: PAM | Verify native SUSE module activation
+  become: true
+  become_user: root
+  ansible.builtin.command:
+    argv: [pam-config, --query, "--{{ item }}"]
+  register: __pam_native_module
+  changed_when: false
+  failed_when: >-
+    __pam_native_module.rc != 0 or
+    (__pam_native_module.stdout | length > 0) != (item in __pam_expected_modules)
+  loop: [sss, winbind, mkhomedir, access]
+  when: ansible_facts.os_family == 'Suse'
+
+- name: PAM | Read preserved NSS sources
+  ansible.builtin.slurp:
+    src: /etc/nsswitch.conf
+  register: __pam_native_nss
+  when: ansible_facts.os_family != 'RedHat'
+
+- name: PAM | Verify source order and comments survive provider changes
+  ansible.builtin.assert:
+    that:
+      - __pam_native_nss.content | b64decode is search('(?m)^passwd:[ \t]+files[ \t]+systemd')
+      - __pam_native_nss.content | b64decode is search('(?m)^group:[ \t]+files[ \t]+systemd')
+      - "'# pam fixture passwd' in (__pam_native_nss.content | b64decode)"
+      - "'# pam fixture group' in (__pam_native_nss.content | b64decode)"
+      - >-
+        (__pam_native_nss.content | b64decode | regex_findall('(?m)^(?:passwd|group):[^#\n]*[ \t]sss(?=[ \t#]|$)') | length)
+        == ((__pam_expected_provider == 'sssd') | ternary(2, 0))
+      - >-
+        (__pam_native_nss.content | b64decode | regex_findall('(?m)^(?:passwd|group):[^#\n]*[ \t]winbind(?=[ \t#]|$)') | length)
+        == ((__pam_expected_provider == 'winbind') | ternary(2, 0))
+  when: ansible_facts.os_family != 'RedHat'

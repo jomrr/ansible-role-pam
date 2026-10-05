@@ -1,0 +1,15 @@
+---
+# role: pam
+# file: vars/Debian.yml
+
+__pam_packages: [libpam-runtime, libpam-modules]
+__pam_provider_packages:
+  sssd: [libpam-sss, libnss-sss]
+  winbind: [libpam-winbind, libnss-winbind]
+  local: []
+__pam_home_packages: []
+__pam_managed_profiles: [sss, winbind, mkhomedir, access]
+__pam_enabled_profiles: >-
+  {{ (pam_provider == 'local') | ternary([], [pam_provider | replace('sssd', 'sss')]) +
+     (pam_mkhomedir | ternary(['mkhomedir'], [])) +
+     ((pam_access_rules | length > 0) | ternary(['access'], [])) }}

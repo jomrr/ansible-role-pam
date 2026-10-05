@@ -1,0 +1,15 @@
+---
+# role: pam
+# file: handlers/main.yml
+
+- name: PAM | Restore labels under changed home roots
+  become: true
+  become_user: root
+  ansible.builtin.command:
+    argv: [restorecon, -R, -i, "{{ __pam_relabel_root }}"]
+  changed_when: true
+  loop: "{{ __pam_home_contexts.results | selectattr('changed') | map(attribute='__pam_home_root') }}"
+  loop_control:
+    loop_var: __pam_relabel_root
+    label: "{{ __pam_relabel_root }}"
+  listen: relabel home roots

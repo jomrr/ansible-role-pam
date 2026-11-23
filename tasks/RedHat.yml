@@ -9,6 +9,10 @@
     name: oddjobd
     enabled: true
     state: started
+  register: __pam_oddjobd
+  failed_when: >-
+    __pam_oddjobd is failed and
+    not (ansible_check_mode and __pam_oddjobd.msg == 'Could not find the requested service oddjobd: host')
   when: pam_mkhomedir
 
 - name: PAM | Read the native authentication profile

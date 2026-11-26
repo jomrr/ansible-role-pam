@@ -24,12 +24,20 @@
       vars:
         pam_provider: local
         pam_mkhomedir: false
+        pam_access_groups: []
 
     - name: PAM | Verify local authentication and inactive optional modules
       ansible.builtin.import_tasks: ../tasks/verify_selection.yml
       vars:
         __pam_expected_provider: local
         __pam_expected_modules: []
+
+    - name: Verify SUSE's distribution account entry after removing the group restriction
+      ansible.builtin.command: readlink /etc/pam.d/common-account
+      register: __pam_restored_link
+      changed_when: false
+      failed_when: __pam_restored_link.rc != 0 or __pam_restored_link.stdout != 'common-account-pc'
+      when: ansible_facts.os_family == 'Suse'
 
     - name: PAM | Authenticate another local account without creating its home
       ansible.builtin.command:

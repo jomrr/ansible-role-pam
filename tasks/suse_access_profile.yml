@@ -1,0 +1,74 @@
+---
+# role: pam
+# file: tasks/suse_access_profile.yml
+
+- name: suse_access_profile | Create the native module configuration directory
+  become: true
+  become_user: root
+  ansible.builtin.file:
+    path: /etc/pam-config.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: suse_access_profile | Place group checks before the domain provider
+  become: true
+  become_user: root
+  ansible.builtin.template:
+    src: pam_config.j2
+    dest: /etc/pam-config.d/pam-access.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ pam_backup }}"
+  register: __pam_native_profile
+  when: pam_access_groups | length > 0
+
+# The native query reports only "account:" for a custom module definition.
+- name: suse_access_profile | Read the role's active rule from the generated stack
+  ansible.builtin.find:
+    paths: /etc/pam.d
+    patterns: common-account-pc
+    contains: "{{ __pam_native_access_pattern }}"
+  register: __pam_native_gate
+
+- name: suse_access_profile | Reconcile the generated policy before switching account entries
+  when: >-
+    (__pam_native_gate.matched > 0) != (pam_access_groups | length > 0) or __pam_native_profile is changed or
+    (pam_access_groups | length > 0 and __pam_account_target in __pam_wrapper_targets)
+  block:
+    # Only pam-config can regenerate its stacks while retaining the selected modules.
+    - name: suse_access_profile | Apply the selected account policy
+      become: true
+      become_user: root
+      ansible.builtin.command:
+        argv: [pam-config, "{{ (pam_access_groups | length > 0) | ternary('--add', '--delete') }}", --access]
+      register: __pam_access_change
+      changed_when: __pam_access_change.rc == 0
+      failed_when: __pam_access_change.rc != 0
+
+    - name: suse_access_profile | Verify the effective group rule after regenerating the stack
+      ansible.builtin.find:
+        paths: /etc/pam.d
+        patterns: common-account-pc
+        contains: "{{ __pam_native_access_pattern }}"
+      register: __pam_applied_gate
+      failed_when: (__pam_applied_gate.matched > 0) != (pam_access_groups | length > 0)
+      when: not ansible_check_mode
+
+- name: suse_access_profile | Identify the inactive role-owned module definition
+  ansible.builtin.find:
+    paths: /etc/pam-config.d
+    patterns: pam-access.conf
+    contains: "{{ '^Account: ' ~ (__pam_native_access_rule | regex_escape) ~ '$' }}"
+  register: __pam_inactive_profiles
+  when: pam_access_groups | length == 0
+
+- name: suse_access_profile | Remove the role's inactive module definition
+  become: true
+  become_user: root
+  ansible.builtin.file:
+    path: /etc/pam-config.d/pam-access.conf
+    state: absent
+  when: pam_access_groups | length == 0 and __pam_inactive_profiles.matched > 0

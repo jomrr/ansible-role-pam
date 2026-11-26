@@ -4,10 +4,23 @@
 
 __pam_packages:
   - pam
-  - "{{ (pam_access_groups | length > 0) | ternary('pam-config>=2.14', 'pam-config') }}"
+  - pam-config
 __pam_provider_packages:
   sssd: [sssd]
   winbind: []
   local: []
 __pam_home_packages: []
-__pam_apply_account_profile: [pam-config, --update]
+__pam_suse_modules:
+  - name: sss
+    enabled: "{{ pam_provider == 'sssd' }}"
+  - name: winbind
+    enabled: "{{ pam_provider == 'winbind' }}"
+  - name: mkhomedir
+    enabled: "{{ pam_mkhomedir }}"
+__pam_native_profiles: "{{ __pam_config_version.stdout_lines[0].split()[-1] is version('2.14', '>=') }}"
+__pam_use_account_wrapper: "{{ pam_access_groups | length > 0 and not __pam_native_profiles }}"
+__pam_account_target: "{{ __pam_account_entry.stat.lnk_target | default('') }}"
+__pam_wrapper_targets: [pam-access-common-account, /etc/pam.d/pam-access-common-account]
+__pam_stock_targets: [common-account-pc, /etc/pam.d/common-account-pc]
+__pam_native_access_rule: account required pam_access.so accessfile=/etc/security/pam-access.conf nodefgroup listsep=,
+__pam_native_access_pattern: "{{ '^' ~ (__pam_native_access_rule | regex_escape) ~ '[ \\t]*$' }}"

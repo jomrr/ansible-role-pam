@@ -1,5 +1,5 @@
 {{ ansible_managed | comment(prefix_count=0, postfix_count=0) }}
 # file: {{ template_destpath }}
 [pam_access.so]
-Account: account required pam_access.so accessfile=/etc/security/pam-access.conf nodefgroup listsep=,
+Account: {{ __pam_native_access_rule }}
 Account-Priority: 850

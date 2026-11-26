@@ -2,20 +2,39 @@
 # role: pam
 # file: tasks/Suse.yml
 
-- name: PAM | Configure native PAM modules
+# pam-config reports the version of the tool that actually generates the stack.
+- name: Suse | Read the installed pam-config version
+  ansible.builtin.command: pam-config --version
+  register: __pam_config_version
+  changed_when: false
+  failed_when: __pam_config_version.rc != 0
+  check_mode: false
+
+- name: Suse | Identify the active account entry without following its link
+  ansible.builtin.stat:
+    path: /etc/pam.d/common-account
+    follow: false
+    get_checksum: false
+    get_mime: false
+    get_attributes: false
+  register: __pam_account_entry
+
+- name: Suse | Refuse to replace an administrator's account stack
+  ansible.builtin.fail:
+    msg: Group restrictions require /etc/pam.d/common-account to link to common-account-pc or the role's pam-access-common-account.
+  when:
+    - pam_access_groups | length > 0
+    - __pam_account_target not in __pam_stock_targets + __pam_wrapper_targets
+
+# Disabling the last domain provider also removes SUSE's local-user exemption.
+- name: Suse | Enable selected PAM modules before removing the previous provider
   ansible.builtin.include_tasks: suse_module.yml
-  loop:
-    - name: sss
-      enabled: "{{ pam_provider == 'sssd' }}"
-    - name: winbind
-      enabled: "{{ pam_provider == 'winbind' }}"
-    - name: mkhomedir
-      enabled: "{{ pam_mkhomedir }}"
+  loop: "{{ __pam_suse_modules | sort(attribute='enabled', reverse=true) }}"
   loop_control:
     loop_var: __pam_module
     label: "{{ __pam_module.name }}"
 
-- name: PAM | Initialize the NSS configuration from distribution defaults
+- name: Suse | Initialize the NSS configuration from distribution defaults
   become: true
   become_user: root
   ansible.builtin.copy:
@@ -28,60 +47,39 @@
     group: root
     mode: '0644'
 
-- name: Suse | Create the native module configuration directory
-  become: true
-  become_user: root
-  ansible.builtin.file:
-    path: /etc/pam-config.d
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
+- name: Suse | Configure native account module ordering where supported
+  ansible.builtin.include_tasks: suse_access_profile.yml
+  when: __pam_native_profiles
 
-- name: Suse | Place access checks after the native local-user exemption
+- name: Suse | Install the group check ahead of the generated account stack
   become: true
   become_user: root
   ansible.builtin.template:
-    src: pam_config.j2
-    dest: /etc/pam-config.d/pam-access.conf
+    src: suse_common_account.j2
+    dest: /etc/pam.d/pam-access-common-account
     owner: root
     group: root
     mode: '0644'
     backup: "{{ pam_backup }}"
-  when: pam_access_groups | length > 0
-  notify: apply account profile
+  when: __pam_use_account_wrapper
 
-- name: Suse | Remove the inactive account ordering override
+- name: Suse | Select the account entry for this pam-config version and policy
   become: true
   become_user: root
   ansible.builtin.file:
-    path: /etc/pam-config.d/pam-access.conf
+    path: /etc/pam.d/common-account
+    src: "{{ __pam_use_account_wrapper | ternary('pam-access-common-account', 'common-account-pc') }}"
+    state: link
+    follow: false
+    force: "{{ ansible_check_mode }}"
+  when: __pam_use_account_wrapper or __pam_account_target in __pam_wrapper_targets
+
+- name: Suse | Retire the wrapper after restoring the distribution entry
+  become: true
+  become_user: root
+  ansible.builtin.file:
+    path: /etc/pam.d/pam-access-common-account
     state: absent
-  when: pam_access_groups | length == 0
-  notify: apply account profile
-
-- name: Suse | Read the native access module configuration
-  become: true
-  become_user: root
-  ansible.builtin.command: pam-config --query --access
-  register: __pam_access_query
-  changed_when: false
-  failed_when: __pam_access_query.rc != 0
-  check_mode: false
-
-- name: Suse | Enable native account authorization
-  become: true
-  become_user: root
-  ansible.builtin.command:
-    argv:
-      - pam-config
-      - "{{ (pam_access_groups | length > 0) | ternary('--add', '--delete') }}"
-      - --access
-  register: __pam_access_change
-  changed_when: __pam_access_change.rc == 0
-  failed_when: __pam_access_change.rc != 0
-  when: >-
-    (pam_access_groups | length > 0 and
-     __pam_access_query.stdout | length == 0) or
-    (pam_access_groups | length == 0 and
-     'accessfile=/etc/security/pam-access.conf' in __pam_access_query.stdout)
+  when:
+    - not __pam_use_account_wrapper
+    - __pam_account_target in __pam_wrapper_targets

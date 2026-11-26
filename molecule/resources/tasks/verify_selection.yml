@@ -45,7 +45,7 @@
   failed_when: >-
     __pam_native_module.rc != 0 or
     (__pam_native_module.stdout | length > 0) != (item in __pam_expected_modules)
-  loop: [sss, winbind, mkhomedir]
+  loop: "{{ ['sss', 'winbind', 'mkhomedir'] + ((__pam_expected_provider == 'local') | ternary(['access'], [])) }}"
   when: ansible_facts.os_family == 'Suse'
 
 - name: PAM | Read preserved NSS sources

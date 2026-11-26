@@ -24,7 +24,7 @@ provisioner:
       all:
         ansible_podman_mount_detection: false
         pam_provider: "sssd"
-        pam_access_groups: "{{ (ansible_facts.os_family == 'Suse') | ternary(['molecule-domain-logins'], []) }}"
+        pam_access_groups: "{{ (ansible_facts.os_family in ['RedHat', 'Suse']) | ternary(['molecule-domain-logins'], []) }}"
         pam_authselect_force: true
         pam_home_roots:
           - "/home/pam-fixture"

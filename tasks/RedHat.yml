@@ -47,8 +47,10 @@
 - name: RedHat | Add account authorization ahead of sufficient modules
   become: true
   become_user: root
-  ansible.builtin.template:
-    src: authselect.j2
+  ansible.builtin.copy:
+    content: >-
+      {{ __pam_profile.content | b64decode |
+         regex_replace('(?m)^(?=account[ \t])', 'account substack pam-access\n', count=1, mandatory_count=1) }}
     dest: "/etc/authselect/custom/pam-{{ pam_provider }}/{{ __pam_profile.__pam_profile }}"
     owner: root
     group: root

@@ -1,0 +1,25 @@
+---
+# role: pam
+# file: molecule/resources/tasks/verify_authselect_stack.yml
+
+- name: Read the distribution stack
+  ansible.builtin.slurp:
+    src: "/usr/share/authselect/default/{{ __pam_expected_provider }}/{{ __pam_stack }}"
+  register: __pam_distribution_stack
+
+- name: Read the derived stack
+  ansible.builtin.slurp:
+    src: "/etc/authselect/{{ __pam_expected_profile }}/{{ __pam_stack }}"
+  register: __pam_derived_stack
+
+- name: Verify the only change is the substack before the first account rule
+  vars:
+    __pam_lines: "{{ (__pam_distribution_stack.content | b64decode).splitlines(true) }}"
+    __pam_first_account: "{{ __pam_lines.index(__pam_lines | select('match', '^account[ \t]') | first) }}"
+    __pam_substack: "account substack pam-access\n"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (__pam_derived_stack.content | b64decode) ==
+        ((__pam_lines[:__pam_first_account] + [__pam_substack] + __pam_lines[__pam_first_account:]) | join)
+    fail_msg: "{{ __pam_expected_profile }}/{{ __pam_stack }} differs from the expected distribution stack"

@@ -10,6 +10,7 @@
       ansible.builtin.import_tasks: ../tasks/verify_selection.yml
       vars:
         __pam_expected_provider: sssd
+        __pam_expected_profile: custom/pam-sssd
         __pam_expected_modules: [sss, mkhomedir]
 
     - name: PAM | Authenticate through the native PAM stack and create the home

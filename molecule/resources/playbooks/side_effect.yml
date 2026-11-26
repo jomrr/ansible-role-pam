@@ -6,16 +6,39 @@
   hosts: all
   gather_facts: true
   tasks:
-    - name: PAM | Switch to winbind
-      ansible.builtin.include_role:
-        name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+    - name: Exercise winbind selection and profile repair
       vars:
         pam_provider: winbind
+      block:
+        - name: PAM | Switch to winbind
+          ansible.builtin.include_role:
+            name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+
+        - name: Reproduce the damaged first distribution account rule
+          become: true
+          become_user: root
+          ansible.builtin.replace:
+            path: "/etc/authselect/custom/pam-winbind/{{ __pam_stack }}"
+            after: '(?m)^account substack pam-access\n'
+            regexp: '\Aaccount[ \t]+'
+            replace: "\x01"
+          loop: [system-auth, password-auth]
+          loop_control:
+            loop_var: __pam_stack
+          register: __pam_damage
+          failed_when: __pam_damage is failed or __pam_damage is not changed
+          when: ansible_facts.os_family == 'RedHat'
+
+        - name: Reapply the role to the damaged active winbind profile
+          ansible.builtin.include_role:
+            name: "{{ lookup('ansible.builtin.env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+          when: ansible_facts.os_family == 'RedHat'
 
     - name: PAM | Verify winbind replaced SSSD in the native selection
       ansible.builtin.import_tasks: ../tasks/verify_selection.yml
       vars:
         __pam_expected_provider: winbind
+        __pam_expected_profile: custom/pam-winbind
         __pam_expected_modules: [winbind, mkhomedir]
 
     - name: PAM | Switch to local accounts and disable home creation
@@ -30,6 +53,7 @@
       ansible.builtin.import_tasks: ../tasks/verify_selection.yml
       vars:
         __pam_expected_provider: local
+        __pam_expected_profile: local
         __pam_expected_modules: []
 
     - name: Verify SUSE's distribution account entry after removing the group restriction

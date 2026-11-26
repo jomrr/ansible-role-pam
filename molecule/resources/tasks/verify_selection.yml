@@ -13,9 +13,18 @@
 - name: PAM | Verify the Red Hat provider and optional modules
   ansible.builtin.assert:
     that:
-      - __pam_native_profile.stdout.split()[0] == __pam_expected_provider
+      - __pam_native_profile.stdout.split()[0] == __pam_expected_profile
       - "('with-mkhomedir' in __pam_native_profile.stdout.split()) == ('mkhomedir' in __pam_expected_modules)"
   when: ansible_facts.os_family == 'RedHat'
+
+- name: Verify both stacks in the derived Red Hat profile
+  ansible.builtin.include_tasks: verify_authselect_stack.yml
+  loop: [system-auth, password-auth]
+  loop_control:
+    loop_var: __pam_stack
+  when:
+    - ansible_facts.os_family == 'RedHat'
+    - __pam_expected_profile.startswith('custom/')
 
 - name: PAM | Read the native Debian profile selection
   become: true

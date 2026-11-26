@@ -5,6 +5,11 @@
 - name: PAM | Prepare native login and NSS fixtures
   hosts: all
   gather_facts: true
+  vars:
+    __pam_fixture_modules:
+      Debian: [libpam-winbind, libnss-winbind]
+      RedHat: [samba-winbind]
+      Suse: [samba-winbind]
   tasks:
     - name: PAM | Refresh Debian package metadata
       become: true
@@ -12,6 +17,15 @@
       ansible.builtin.apt:
         update_cache: true
       when: ansible_facts.os_family == 'Debian'
+
+    - name: Supply the Winbind PAM and NSS modules as a caller prerequisite
+      become: true
+      become_user: root
+      ansible.builtin.package:
+        name: "{{ __pam_fixture_modules[ansible_facts.os_family] }}"
+        state: present
+      environment:
+        DEBIAN_FRONTEND: noninteractive
 
     - name: PAM | Install the native login command in the minimal Fedora image
       become: true

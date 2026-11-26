@@ -1,0 +1,6 @@
+{{ ansible_managed | comment(prefix_count=0, postfix_count=0) }}
+# file: {{ template_destpath }}
+{% for __pam_group in pam_access_groups %}
++:({{ __pam_group }}):ALL
+{% endfor %}
+{{ (pam_access_groups | length > 0) | ternary('-', '+') }}:ALL:ALL

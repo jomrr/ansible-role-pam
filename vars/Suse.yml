@@ -2,9 +2,12 @@
 # role: pam
 # file: vars/Suse.yml
 
-__pam_packages: [pam, pam-config]
+__pam_packages:
+  - pam
+  - "{{ (pam_access_groups | length > 0) | ternary('pam-config>=2.14', 'pam-config') }}"
 __pam_provider_packages:
   sssd: [sssd]
-  winbind: [samba-winbind]
+  winbind: []
   local: []
 __pam_home_packages: []
+__pam_apply_account_profile: [pam-config, --update]

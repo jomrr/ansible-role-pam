@@ -1,0 +1,14 @@
+---
+# role: pam
+# file: tasks/install.yml
+
+- name: install | Install native authentication components
+  become: true
+  become_user: root
+  ansible.builtin.package:
+    name: >-
+      {{ __pam_packages + __pam_provider_packages[pam_provider] +
+         (pam_mkhomedir | ternary(__pam_home_packages, [])) +
+         ((ansible_facts.selinux.status == 'enabled' and pam_home_roots | length > 0) |
+          ternary(['policycoreutils-python-utils'], [])) }}
+    state: present

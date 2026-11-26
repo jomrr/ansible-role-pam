@@ -23,6 +23,65 @@
     dest: /etc/nsswitch.conf
     remote_src: true
     force: false
+    backup: "{{ pam_backup }}"
     owner: root
     group: root
     mode: '0644'
+
+- name: Suse | Create the native module configuration directory
+  become: true
+  become_user: root
+  ansible.builtin.file:
+    path: /etc/pam-config.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Suse | Place access checks after the native local-user exemption
+  become: true
+  become_user: root
+  ansible.builtin.template:
+    src: pam_config.j2
+    dest: /etc/pam-config.d/pam-access.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ pam_backup }}"
+  when: pam_access_groups | length > 0
+  notify: apply account profile
+
+- name: Suse | Remove the inactive account ordering override
+  become: true
+  become_user: root
+  ansible.builtin.file:
+    path: /etc/pam-config.d/pam-access.conf
+    state: absent
+  when: pam_access_groups | length == 0
+  notify: apply account profile
+
+- name: Suse | Read the native access module configuration
+  become: true
+  become_user: root
+  ansible.builtin.command: pam-config --query --access
+  register: __pam_access_query
+  changed_when: false
+  failed_when: __pam_access_query.rc != 0
+  check_mode: false
+
+- name: Suse | Enable native account authorization
+  become: true
+  become_user: root
+  ansible.builtin.command:
+    argv:
+      - pam-config
+      - "{{ (pam_access_groups | length > 0) | ternary('--add', '--delete') }}"
+      - --access
+  register: __pam_access_change
+  changed_when: __pam_access_change.rc == 0
+  failed_when: __pam_access_change.rc != 0
+  when: >-
+    (pam_access_groups | length > 0 and
+     __pam_access_query.stdout | length == 0) or
+    (pam_access_groups | length == 0 and
+     'accessfile=/etc/security/pam-access.conf' in __pam_access_query.stdout)

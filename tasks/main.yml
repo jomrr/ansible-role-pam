@@ -14,16 +14,11 @@
 - name: PAM | Validate home roots
   ansible.builtin.import_tasks: assert.yml
 
-- name: PAM | Install native authentication components
-  become: true
-  become_user: root
-  ansible.builtin.package:
-    name: >-
-      {{ __pam_packages + __pam_provider_packages[pam_provider] +
-         (pam_mkhomedir | ternary(__pam_home_packages, [])) +
-         ((ansible_facts.selinux.status == 'enabled' and pam_home_roots | length > 0) |
-          ternary(['policycoreutils-python-utils'], [])) }}
-    state: present
+- name: Install native authentication components
+  ansible.builtin.import_tasks: install.yml
+
+- name: Configure PAM module policies
+  ansible.builtin.import_tasks: configure.yml
 
 - name: PAM | Select the native authentication provider
   ansible.builtin.include_tasks: "{{ ansible_facts.os_family }}.yml"

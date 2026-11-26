@@ -1,0 +1,8 @@
+{{ ansible_managed | comment(prefix_count=0, postfix_count=0) }}
+# file: {{ template_destpath }}
+Name: Domain account authorization
+Default: no
+Priority: 1024
+Account-Type: Primary
+Account:
+    substack pam-access

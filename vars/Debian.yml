@@ -5,10 +5,12 @@
 __pam_packages: [libpam-runtime, libpam-modules]
 __pam_provider_packages:
   sssd: [libpam-sss, libnss-sss]
-  winbind: [libpam-winbind, libnss-winbind]
+  winbind: []
   local: []
 __pam_home_packages: []
-__pam_managed_profiles: [sss, winbind, mkhomedir]
+__pam_managed_profiles: [sss, winbind, mkhomedir, pam-access]
 __pam_enabled_profiles: >-
   {{ (pam_provider == 'local') | ternary([], [pam_provider | replace('sssd', 'sss')]) +
-     (pam_mkhomedir | ternary(['mkhomedir'], [])) }}
+     (pam_mkhomedir | ternary(['mkhomedir'], [])) +
+     ((pam_access_groups | length > 0) | ternary(['pam-access'], [])) }}
+__pam_apply_account_profile: [pam-auth-update, --package]

@@ -7,9 +7,10 @@ __pam_packages:
   - pam
 __pam_provider_packages:
   sssd: [sssd-client]
-  winbind: [samba-winbind]
+  winbind: []
   local: []
 __pam_home_packages: [oddjob-mkhomedir]
 __pam_authselect_profile: >-
-  {{ [pam_provider] + (pam_authselect_features | difference(['with-mkhomedir'])) +
+  {{ [(pam_access_groups | length > 0) | ternary('custom/pam-' ~ pam_provider, pam_provider)] + (pam_authselect_features | difference(['with-mkhomedir'])) +
      (pam_mkhomedir | ternary(['with-mkhomedir'], [])) }}
+__pam_apply_account_profile: [authselect, apply-changes]

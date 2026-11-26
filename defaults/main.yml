@@ -21,3 +21,11 @@ pam_authselect_force: false
 pam_home_roots: []
 # pam_home_roots:
 #   - /home/AD.EXAMPLE.COM
+
+# Domain login groups checked during the account phase; [] disables this restriction.
+pam_access_groups: []
+# pam_access_groups:
+#   - 'EXAMPLE\Linux Admins'
+
+# Back up managed configuration files before replacing them.
+pam_backup: true

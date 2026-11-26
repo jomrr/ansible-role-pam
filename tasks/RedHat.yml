@@ -15,6 +15,53 @@
     not (ansible_check_mode and __pam_oddjobd.msg == 'Could not find the requested service oddjobd: host')
   when: pam_mkhomedir
 
+- name: RedHat | Derive the native account profile
+  become: true
+  become_user: root
+  ansible.builtin.command:
+    argv:
+      - authselect
+      - create-profile
+      - "pam-{{ pam_provider }}"
+      - "--base-on={{ pam_provider }}"
+      - --symlink-meta
+      - --symlink-nsswitch
+      - --symlink-pam
+    creates: /etc/authselect/custom/pam-{{ pam_provider }}/README
+  when: pam_access_groups | length > 0
+  register: __pam_authselect_create
+  changed_when: __pam_authselect_create is changed
+  failed_when: __pam_authselect_create.rc != 0
+
+- name: RedHat | Read the current distribution account profiles
+  become: true
+  become_user: root
+  ansible.builtin.slurp:
+    src: "/usr/share/authselect/default/{{ pam_provider }}/{{ __pam_profile }}"
+  loop: [system-auth, password-auth]
+  loop_control:
+    loop_var: __pam_profile
+  register: __pam_authselect_sources
+  when: pam_access_groups | length > 0
+
+- name: RedHat | Add account authorization ahead of sufficient modules
+  become: true
+  become_user: root
+  ansible.builtin.template:
+    src: authselect.j2
+    dest: "/etc/authselect/custom/pam-{{ pam_provider }}/{{ __pam_profile.__pam_profile }}"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ pam_backup }}"
+    follow: false
+  loop: "{{ __pam_authselect_sources.results }}"
+  loop_control:
+    loop_var: __pam_profile
+    label: "{{ __pam_profile.__pam_profile }}"
+  when: pam_access_groups | length > 0
+  notify: apply account profile
+
 - name: PAM | Read the native authentication profile
   become: true
   become_user: root

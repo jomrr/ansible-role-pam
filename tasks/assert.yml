@@ -12,3 +12,20 @@
   loop_control:
     loop_var: __pam_home_root
     label: "{{ __pam_home_root }}"
+
+- name: assert | Require a domain provider for domain account restrictions
+  ansible.builtin.assert:
+    that: pam_access_groups | length == 0 or pam_provider != 'local'
+    fail_msg: Account group restrictions require the sssd or winbind provider.
+    quiet: true
+
+- name: assert | Validate account group names
+  ansible.builtin.assert:
+    that:
+      - __pam_group | length > 0
+      - __pam_group is not search('[,:\r\n]')
+    fail_msg: Account groups must be nonempty NSS names without commas, colons or line breaks.
+    quiet: true
+  loop: "{{ pam_access_groups }}"
+  loop_control:
+    loop_var: __pam_group

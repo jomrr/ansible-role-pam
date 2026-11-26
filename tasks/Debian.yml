@@ -2,6 +2,19 @@
 # role: pam
 # file: tasks/Debian.yml
 
+- name: Debian | Install the account authorization profile
+  become: true
+  become_user: root
+  ansible.builtin.template:
+    src: pam_auth_update.j2
+    dest: /usr/share/pam-configs/pam-access
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ pam_backup }}"
+  when: pam_access_groups | length > 0
+  notify: apply account profile
+
 - name: PAM | Read the native PAM profile selection after package installation
   become: true
   become_user: root

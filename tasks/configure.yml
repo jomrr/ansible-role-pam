@@ -1,0 +1,20 @@
+---
+# role: pam
+# file: tasks/configure.yml
+
+- name: configure | Configure domain account authorization
+  become: true
+  become_user: root
+  ansible.builtin.template:
+    src: "{{ __pam_file.src }}"
+    dest: "{{ __pam_file.dest }}"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ pam_backup }}"
+  loop:
+    - {src: access.conf.j2, dest: /etc/security/pam-access.conf}
+    - {src: pam_account.j2, dest: /etc/pam.d/pam-access}
+  loop_control:
+    loop_var: __pam_file
+    label: "{{ __pam_file.dest }}"

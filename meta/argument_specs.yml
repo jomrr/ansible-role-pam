@@ -19,6 +19,17 @@ argument_specs:
         required: false
         default: true
         description: Create home directories through the native PAM session module.
+      pam_access_groups:
+        type: list
+        elements: str
+        default: []
+        description: NSS group names allowed for domain users in the system PAM account
+          phase. Local passwd accounts are exempt; an empty list disables this restriction.
+          Requires the sssd or winbind provider.
+      pam_backup:
+        type: bool
+        default: true
+        description: Back up managed configuration files before replacing them.
       pam_authselect_features:
         type: list
         elements: str

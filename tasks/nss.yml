@@ -9,7 +9,7 @@
     path: /etc/nsswitch.conf
     regexp: '^(passwd|group):([ \t]*(?:[^#\n]*?[ \t]+)?){{ __pam_nss_source }}(?=[ \t#]|$)[ \t]*'
     replace: '\1:\2'
-    backup: true
+    backup: "{{ pam_backup }}"
   loop: [sss, winbind]
   loop_control:
     loop_var: __pam_nss_source
@@ -23,5 +23,5 @@
     path: /etc/nsswitch.conf
     regexp: '^(passwd|group):([ \t]*)(?!(?:[^#\n]*[ \t]+)?{{ pam_provider | replace("sssd", "sss") }}(?=[ \t#]|$))([^#\n]*?)([ \t]*(?:#.*)?)$'
     replace: '\1:\2\3 {{ pam_provider | replace("sssd", "sss") }}\4'
-    backup: true
+    backup: "{{ pam_backup }}"
   when: pam_provider != 'local'

@@ -1,0 +1,3 @@
+{{ ansible_managed | comment(prefix_count=0, postfix_count=0) }}
+# file: {{ template_destpath }}
+{{ __pam_profile.content | b64decode | regex_replace('(?m)^(account\s+)', 'account substack pam-access\n\1', count=1) }}

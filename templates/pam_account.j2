@@ -1,0 +1,4 @@
+{{ ansible_managed | comment(prefix_count=0, postfix_count=0) }}
+# file: {{ template_destpath }}
+account [success=1 default=ignore] pam_localuser.so
+account required pam_access.so accessfile=/etc/security/pam-access.conf nodefgroup listsep=,
